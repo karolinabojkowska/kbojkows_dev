@@ -235,7 +235,7 @@ def sortReadCoorsPerTile( conf_file ):
 
 printMsg("............................ Starting python module ............................")
 
-sortReadCoorsPerTile(config_file = my_conf)
+sortReadCoorsPerTile(conf_file = my_conf)
 
 printMsg("............................ End of python module ............................")
 
