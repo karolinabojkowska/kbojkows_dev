@@ -87,6 +87,10 @@ def printMsg ( text ):
     """
     print("[INFO] [",dt.now().strftime('%Y/%m/%d %H:%M:%S').strip("\s"),"] ", text, "\n", sep="")
 
+def rootPath(file):
+        # root path
+    return(separ.join(file.rsplit(sep=separ)[:-1]))
+
 def extractPaths( file ):
     """
     Process a master_demux.conf config file to extract the Unaligned Suffix and make a list of demuxed projects.
@@ -102,8 +106,7 @@ def extractPaths( file ):
         sys.exit("[FATAL] File "+file+" does not exist or is not readable.")
     else:
         pass
-    # root path
-    r_path=separ.join(file.rsplit(sep=separ)[:-1])
+    r_path=rootPath(file)    
     # read config file
     with open(file, 'r') as f:
         printMsg("Processing the following config file :")
@@ -125,7 +128,7 @@ def extractPaths( file ):
     print(file, "\n", sep="")
     printMsg("Unaligned project paths :")
     print('\n'.join(myList), '\n')
-    return(myList, r_path)
+    return(myList)
 
 def makeFQlist( folder_path_list ):
     """
@@ -180,52 +183,77 @@ def processUnalFqXtractReadCoords( file_list , read_coord_file ):
                 headers_file.write(extractReadCoordinates(i[0])+'\n')
     return(tiles_set, printMsg("Read coordiantes file ready: "+'\n'+read_coord_file))
 
-def makeReadCoorFile( conf_file , tmp_directory_name ):
+def makeReadCoorFile( conf_file ):
     """
 
     """
-    # set 
-    ROOT_PATH=extractPaths(conf_file)[1]
-    tmp_dir=ROOT_PATH+separ+tmp_directory_name
+    # set paths and names
+    ROOT_PATH=rootPath(conf_file)
+    unal_paths=extractPaths(conf_file)
 
-    # define file name
-    read_coord_file=tmp_dir+separ+'readsCoordiates.txt'
-    #make temporary folder for read_coordinates per tile
-    if not os.path.isdir(tmp_dir):
-        os.mkdir(tmp_dir)
-        printMsg("Temporary directory for read coordinates per tile created.")
-    else:
-        printMsg("Temporary directory for read coordinates per tile already exists.")
+    tmp_directory_name='perTileReadsTMP'
+    # make list of R1 fastq files to be used for extracting read coordiantes
+    read1_file_list=select_files_pattern(file_list = makeFQlist(unal_paths), pattern ="*_R1_001.*")
 
-    if not os.path.exists(read_coord_file):
-        printMsg("Extracting read coordinates from file "+read_coord_file)
-        return( processUnalFqXtractReadCoords(read_coord_file=read_coord_file, file_list=select_files_pattern(file_list = makeFQlist(extractPaths(conf_file)[0]), pattern ="*_R1_001.*"))[0], 
-        read_coord_file )
-    else:
-        printMsg("File "+read_coord_file+" already exists.")
-        return(set(extractTile(i) for i in open(read_coord_file, "r")), 
-        read_coord_file)
-    
+    lanes=( 'L001', 'L002', 'L003', 'L004' )
+
+    for lane in lanes: 
+
+        printMsg(".............. Processing lane "+lane+" ..............")
+        tmp_dir=ROOT_PATH+separ+lane+tmp_directory_name
+        # define file name
+        
+        L_read1_file_list=fnmatch.filter(read1_file_list, '*_'+lane+'_*' )
+
+        if L_read1_file_list:
+            read_coord_file=tmp_dir+separ+lane+'readsCoordiates.txt'
+        #make temporary folder for read_coordinates per tile
+            if not os.path.isdir(tmp_dir):
+                os.mkdir(tmp_dir)
+                printMsg("Temporary directory for read coordinates per tile created.")
+            else:
+                printMsg("Temporary directory for read coordinates per tile already exists.")
+
+            if not os.path.exists(read_coord_file):
+                printMsg("Extracting read coordinates and writing to file "+read_coord_file)
+                return( processUnalFqXtractReadCoords(read_coord_file=read_coord_file, file_list=L_read1_file_list), read_coord_file )
+            else:
+                printMsg("File "+read_coord_file+" already exists.")
+                return(set(extractTile(i) for i in open(read_coord_file, "r")), read_coord_file)
+        else:
+            printMsg("Lane "+lane+" not present.")
+            pass
+        
 def sortReadCoorsPerTile( conf_file ):
 
     # set variables
-    ROOT_PATH=extractPaths(conf_file)[1]
+    ROOT_PATH=rootPath(conf_file)
     tmp_directory_name='perTileReadsTMP'
-    tmp_dir=ROOT_PATH+separ+tmp_directory_name
 
-    # initialize files
-    (tiles, read_coord_file)=makeReadCoorFile(conf_file, tmp_directory_name)
-    # 
-    # crete tile files
-    [open(tmp_dir+separ+i, "w") for i in tiles]  
-    #print(files)
-    with open(read_coord_file, "r") as rcf:
-        for lane in rcf:
-            #print(lane)
-            tt=extractTile(lane.strip())
-            file=tmp_dir+separ+tt
-            with open(file, "a") as f:
-                f.write(lane)
+    lanes=( 'L001', 'L002', 'L003', 'L004' )
+
+    for lane in lanes: 
+        tmp_dir=ROOT_PATH+separ+lane+tmp_directory_name
+
+        # initialize files
+        (tiles, read_coord_file)=makeReadCoorFile(conf_file)
+        # 
+        # crete tile files
+        for i in tiles:
+            if not os.path.exists(tmp_dir+separ+i):
+                with open(tmp_dir+separ+i, "w"):
+                    pass
+            else:
+                pass
+        
+        #print(files)
+        with open(read_coord_file, "r") as rcf:
+            for lane in rcf:
+                #print(lane)
+                tt=extractTile(lane.strip())
+                file=tmp_dir+separ+tt
+                with open(file, "a") as f:
+                    f.write(lane)
 
 
 
