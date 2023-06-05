@@ -1,0 +1,18 @@
+------- FOR GTF making ------
+
+perl -pe 's/(.+\t)exon/${1}CDS/' Caulobacter_vibrioides_CB15.GCF_000006905.1_ASM690v1_genomic.gtf | head
+
+perl -pe 's/Protein Homology/ProteinHomology/' Caulobacter_vibrioides_CB15.GCF_000006905.1_ASM690v1_genomic.gtf
+
+
+------- FOR STAR working in genome preparation  ---------
+
+source /dcsrsoft/bin/use_old_software
+
+module load HPC/Software
+
+module load Bioinformatics/Software/vital-it
+
+[10:38] Sandra Calderon Copete
+
+module add UHTS/Aligner/STAR/2.5.3a
